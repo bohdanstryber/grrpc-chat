@@ -12,25 +12,35 @@ import (
 
 type chatServiceServer struct {
 	chatpb.UnimplementedChatServiceServer
+
+	//store the chan pointers contained in a single channel
+	//communicate between JoinChannel and SendMessage rpc calls
 	channel map[string][]chan *chatpb.Message
 }
 
 func (s *chatServiceServer) JoinChannel(ch *chatpb.Channel, msgStream chatpb.ChatService_JoinChannelServer) error {
 	msgChannel := make(chan *chatpb.Message)
+	//the joining information stores in the channel map
 	s.channel[ch.Name] = append(s.channel[ch.Name], msgChannel)
 
 	for {
+		//select between two channels
 		select {
 		case <-msgStream.Context().Done(): // channel is closed
 			return nil
 		case msg := <-msgChannel:
 			fmt.Printf("GO ROUTINE (got message): %v \n", msg)
+
+			// The server-side handler can send a stream of protobuf messages to the client through this parameter’s Send method.
 			msgStream.Send(msg)
 		}
 	}
 }
 
 func (s *chatServiceServer) SendMessage(msgStream chatpb.ChatService_SendMessageServer) error {
+	//send the incoming message to them for which JoinChannel go routine is listening to
+
+	//receive the message
 	msg, err := msgStream.Recv()
 
 	if err == io.EOF {
@@ -42,6 +52,7 @@ func (s *chatServiceServer) SendMessage(msgStream chatpb.ChatService_SendMessage
 	}
 
 	ack := chatpb.MessageAck{Status: "SENT"}
+
 	msgStream.SendAndClose(&ack)
 
 	go func() {
@@ -58,6 +69,7 @@ func (s *chatServiceServer) SendMessage(msgStream chatpb.ChatService_SendMessage
 func main() {
 	fmt.Println("------------------")
 	fmt.Println("--- SERVER APP ---")
+	fmt.Println("------------------")
 
 	lis, err := net.Listen("tcp", "localhost:5400")
 

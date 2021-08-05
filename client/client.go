@@ -18,11 +18,14 @@ var senderName = flag.String("sender", "default", "Senders name")
 var tcpServer = flag.String("server", ":5400", "Tcp server")
 
 func joinChannel(ctx context.Context, client chatpb.ChatServiceClient) {
+	//register our self to the channel and wait for incoming message to display to the console.
+
 	channel := chatpb.Channel{
 		Name:        *channelName,
 		SendersName: *senderName,
 	}
 
+	//joining the channel and receiving stream handle
 	stream, err := client.JoinChannel(ctx, &channel)
 	if err != nil {
 		log.Fatalf("client.JoinChannel(ctx, &channel) throws: %v", err)
@@ -82,10 +85,12 @@ func main() {
 
 	fmt.Println("------------------")
 	fmt.Println("--- CLIENT APP ---")
+	fmt.Println("------------------")
 
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithBlock(), grpc.WithInsecure())
 
+	//Dial to tcp connection
 	conn, err := grpc.Dial(*tcpServer, opts...)
 
 	if err != nil {
